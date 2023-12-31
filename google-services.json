@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "312717171179",
+    "project_id": "my-book-project-4cf0f",
+    "storage_bucket": "my-book-project-4cf0f.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:312717171179:android:fb5a57a6d9c79bd97021ae",
+        "android_client_info": {
+          "package_name": "com.tabulayarasa.books"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCcjiUnliTAlRe4DfzWt9jjk28ieNWSf0U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
