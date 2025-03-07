@@ -5,13 +5,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import React from "react";
+import React, { useRef } from "react";
 import Onboarding from "react-native-onboarding-swiper";
 import LottieView from "lottie-react-native";
 
 const { width, height } = Dimensions.get("window");
 
 export default function LottieScreen({ navigation }) {
+  const animation = useRef<LottieView>(null);
   const handleDone = () => {
     navigation.navigate("SignIn");
   };
@@ -36,8 +37,12 @@ export default function LottieScreen({ navigation }) {
               <LottieView
                 source={require("../../assets/animation1.json")}
                 autoPlay
-                loop
+                style={{
+                  width: width * 0.9,
+                  height: width,
+                }}
               />
+            
             </View>
           ),
           title: "Scan",
@@ -52,6 +57,10 @@ export default function LottieScreen({ navigation }) {
                 source={require("../../assets/animation2.json")}
                 autoPlay
                 loop
+                style={{
+                  width: width * 0.9,
+    height: width,
+                }}
               />
             </View>
           ),
@@ -67,6 +76,10 @@ export default function LottieScreen({ navigation }) {
                 source={require("../../assets/animation3.json")}
                 autoPlay
                 loop
+                style={{
+                  width: width * 0.9,
+                  height: width,
+                }}
               />
             </View>
           ),

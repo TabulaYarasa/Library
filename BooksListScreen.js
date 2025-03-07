@@ -117,8 +117,8 @@ export default function BooksListScreen({navigation}) {
             style={{ width: 50, height: 75 }}
           />
           <View>
-            <Text>{item.volumeInfo.title}</Text>
-            <Text>{item.volumeInfo.authors[0]}</Text>
+            <Text>{item?.volumeInfo?.title}</Text>
+            <Text>{item?.volumeInfo?.authors[0]}</Text>
           </View>
         </View>
       </TouchableOpacity>

@@ -11,7 +11,6 @@ import {
 } from "react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { BarCodeScanner } from "expo-barcode-scanner";
 import { getBookByISBN } from "../../api/books";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { collection, onSnapshot } from "firebase/firestore";
@@ -99,7 +98,12 @@ export default function OthersBooksScreen({ navigation, route }) {
             >
               {item.volumeInfo.title}
             </Text>
-            <Text>{item.volumeInfo.authors[0]}</Text>
+            {item.volumeInfo.authors ? (
+              <Text>{item.volumeInfo.authors[0]}</Text>
+            ) : (
+              <Text>Author</Text>
+            )}
+           
           </View>
         </View>
       </TouchableOpacity>

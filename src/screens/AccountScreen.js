@@ -45,8 +45,8 @@ export default function AccountScreen({ navigation }) {
 
       const currentUser = users.filter((users) => users.id == user);
       setUserInfo(currentUser);
-      setEmail(currentUser[0].email);
-      setUserName(currentUser[0].userName);
+      setEmail(currentUser[0]?.email);
+      setUserName(currentUser[0]?.userName);
     });
   }, [user]);
 

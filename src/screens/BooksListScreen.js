@@ -5,15 +5,13 @@ import {
   BackHandler,
   TouchableOpacity,
   FlatList,
-  ListRenderItem,
   Image,
-  Button,
 } from "react-native";
 import React, { useCallback, useEffect, useState } from "react";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { BarCodeScanner } from "expo-barcode-scanner";
+import { useFocusEffect } from "@react-navigation/native";
+import { Camera } from "expo-camera";
 import { getBookByISBN } from "../../api/books";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import {
   serverTimestamp,
   addDoc,
@@ -21,13 +19,9 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { FIRESTORE_DB } from "../../config/FirebaseConfig";
-import { User, getAuth, onAuthStateChanged, signOut } from "firebase/auth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import Animated from 'react-native-reanimated';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 export default function BooksListScreen({ navigation }) {
-  //const navigation = useNavigation();
-
   useFocusEffect(
     useCallback(() => {
       const handleBackPress = () => {
@@ -42,92 +36,67 @@ export default function BooksListScreen({ navigation }) {
 
   const [scanned, setScanned] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const [hasPermission, setHasPermission] = useState(false);
+  const [hasPermission, setHasPermission] = useState(null);
   const [books, setBooks] = useState([]);
   const [favBook, setFavBook] = useState([]);
   const [favorite, setFavorite] = useState(false);
+
   const auth = getAuth();
-  const user = auth.currentUser.uid;
+  const user = auth.currentUser?.uid;
   const STOCK_PIC =
     "https://firebasestorage.googleapis.com/v0/b/my-book-project-4cf0f.appspot.com/o/blank-book-cover-over-png.png?alt=media&token=ce4c1983-ced3-491c-a99b-1822bcccfa2e";
 
-    const author = "unknown"
-
-console.log(user)
-    useEffect(() => {
-    onAuthStateChanged(auth, async (user) => {
+  useEffect(() => {
+    onAuthStateChanged(auth, (user) => {
       if (user) {
-        const uid = await user.uid;
-        console.log("current user " + uid);
+        console.log("Current user:", user.uid);
       } else {
-        console.log("no ussers");
         navigation.navigate("SignFlow");
       }
     });
+  }, [auth, navigation]);
+
+  useEffect(() => {
+    if (!user) return;
+    const booksCollection = collection(FIRESTORE_DB, `users/${user}/books`);
+    onSnapshot(booksCollection, (snapshot) => {
+      const booksData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      const filteredBooks = booksData.filter((book) => book.favorite);
+      setBooks(booksData);
+      setFavBook(filteredBooks);
+    });
   }, [user]);
 
-
   useEffect(() => {
-    
-
-      const booksCollection = collection(FIRESTORE_DB, `users/${user}/books`);
-      
-      onSnapshot(booksCollection, (snapshot) => {
-        const books = snapshot.docs.map((doc) => {
-          return { id: doc.id, ...doc.data() };
-        });
-        
-        let filteredBooks = books.filter(function (book) {
-          return book.favorite;
-        });
-        setBooks(books);
-        
-        setFavBook(filteredBooks);
-      });
-   
-  }, []);
-
-  useEffect(() => {
-    const getBarCodeScannerPermissions = async () => {
-      const { status } = await BarCodeScanner.requestPermissionsAsync();
+    const getCameraPermissions = async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
       setHasPermission(status === "granted");
     };
 
-    getBarCodeScannerPermissions();
+    getCameraPermissions();
   }, []);
 
-   
   const handleBarCodeScanned = async ({ type, data }) => {
     setScanned(true);
     const code = data;
     const bookData = await getBookByISBN(code);
-    
     if (!bookData.items) return;
     addBook(bookData.items[0]);
     setShowScanner(false);
-    alert(
-      `Bar codse wisth type ${type} and data ${bookData} has been scanned!`
-    );
+    alert(`Bar code with type ${type} and data ${data} has been scanned!`);
   };
 
-  if (hasPermission === null) {
-    return <Text>Requesting for camera permission</Text>;
-  }
-  if (hasPermission === false) {
-    return <Text>No access to camera</Text>;
-  }
-
-  let newLink=""
+  let newLink = "";
   const addBook = async (book) => {
-   if(book.volumeInfo.imageLinks){
-    console.log("ife girdi")
-     const yeniUrl = book.volumeInfo.imageLinks.thumbnail;
-      newLink = yeniUrl.replace("http", "https");
-    }else{
-      console.log("else girdi")
-      newLink = STOCK_PIC
+    if (book.volumeInfo.imageLinks) {
+      const thumbnailUrl = book.volumeInfo.imageLinks.thumbnail;
+      newLink = thumbnailUrl.replace("http", "https");
+    } else {
+      newLink = STOCK_PIC;
     }
-    
 
     const newBook = {
       bookId: book.id,
@@ -138,89 +107,76 @@ console.log(user)
       url: newLink,
     };
 
-    const db = await addDoc(
-      collection(FIRESTORE_DB, "users", user, "books"),
-      newBook
-    );
+    await addDoc(collection(FIRESTORE_DB, "users", user, "books"), newBook);
     setScanned(false);
   };
 
   const toggleFavorite = () => {
-    const isFavorite = favorite;
-    setFavorite(!isFavorite);
+    setFavorite((prev) => !prev);
   };
 
-  const renderItem = ({ item }) => {
-    return (
-      <TouchableOpacity
-        style={styles.cardStyle}
-        onPress={() =>
-          navigation.navigate("Kitap", {
-            id: item.id,
-            name: item.volumeInfo.title,
-          })
-        }
-      >
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 20,
-            alignItems: "center",
-            marginBottom: 10,
+  const renderItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.cardStyle}
+      onPress={() =>
+        navigation.navigate("Kitap", {
+          id: item.id,
+          name: item.volumeInfo.title,
+        })
+      }
+    >
+      <View style={styles.cardContent}>
+        <Image
+          source={{
+            uri: item.url ? item.url : STOCK_PIC,
           }}
-        >
-          <Image
-        
-         
-            source={{
-              uri: item.url // resmin kaynağını belirle
-                ? item.url // eğer objenin imageLinks katoloğu varsa, oradan al
-                : STOCK_PIC, // eğer yoksa, sabit bir URL ver
-            }}
-            style={{ width: 50, height: 75 }}
-          />
-
-          <View>
-            <Text
-              style={{ fontWeight: "bold", marginBottom: 10, fontSize: 15 }}
-            >
-              {item.volumeInfo.title}
-            </Text>
-            <Text>{item.volumeInfo.authors ?( item.volumeInfo.authors[0] ):( author)}</Text>
-          </View>
+          style={{ width: 50, height: 75 }}
+        />
+        <View>
+          <Text style={styles.titleText}>{item.volumeInfo.title}</Text>
+          <Text>
+            {item.volumeInfo.authors
+              ? item.volumeInfo.authors[0]
+              : "unknown"}
+          </Text>
         </View>
-      </TouchableOpacity>
-    );
-  };
+      </View>
+    </TouchableOpacity>
+  );
+
+  if (hasPermission === null) {
+    return <Text>Requesting for camera permission</Text>;
+  }
+  if (hasPermission === false) {
+    return <Text>No access to camera</Text>;
+  }
 
   return (
     <View style={styles.container}>
       <View style={styles.filtering}>
-      {favorite ? (
-        <Text style={styles.header}>Favorite Books</Text>
-      ) : (
-        <Text style={styles.header}>Books</Text>
-      )}
-      <View style={{flexDirection:"row", alignItems: "center"}}>
-
-        <Text style={{ textAlign: "center", marginRight: 8 }}>Filter by</Text>
-        <TouchableOpacity style={{ marginRight: 15 }} onPress={toggleFavorite}>
-          <Ionicons
-            name={favorite ? "heart" : "heart-outline"}
-            size={24}
-            color={favorite ? "red" : "black"}
+        {favorite ? (
+          <Text style={styles.header}>Favorite Books</Text>
+        ) : (
+          <Text style={styles.header}>Books</Text>
+        )}
+        <View style={styles.filterOptions}>
+          <Text style={styles.filterText}>Filter by</Text>
+          <TouchableOpacity style={styles.filterButton} onPress={toggleFavorite}>
+            <Ionicons
+              name={favorite ? "heart" : "heart-outline"}
+              size={24}
+              color={favorite ? "red" : "black"}
             />
-        </TouchableOpacity >
-            </View>
-     
+          </TouchableOpacity>
+        </View>
       </View>
-   
 
       {showScanner && (
-        <View>
-          <BarCodeScanner
+        <View style={styles.scannerContainer}>
+          <Camera
+            style={styles.cameraStyle}
             onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
-            style={{ width: "100%", height: "100%", elevation: 2, zIndex: 2 }}
+            type={Camera.Constants.Type.back}
           />
           <TouchableOpacity
             style={styles.fab1}
@@ -230,6 +186,7 @@ console.log(user)
           </TouchableOpacity>
         </View>
       )}
+
       {favorite ? (
         <FlatList
           data={favBook}
@@ -246,11 +203,8 @@ console.log(user)
 
       {hasPermission && (
         <TouchableOpacity
-          //  setShowScanner(true);
           style={styles.fab}
-          onPress={() => {
-            setShowScanner(true);
-          }}
+          onPress={() => setShowScanner(true)}
         >
           <Text style={styles.fabIcon}>+</Text>
         </TouchableOpacity>
@@ -269,18 +223,35 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingHorizontal: 10,
+    marginBottom: 10,
   },
   header: {
     fontWeight: "bold",
-    marginLeft: 10,
     fontSize: 25,
-    marginBottom: 10,
   },
-  absoluteFillObject: {
+  filterOptions: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  filterText: {
+    textAlign: "center",
+    marginRight: 8,
+  },
+  filterButton: {
+    marginRight: 15,
+  },
+  scannerContainer: {
+    flex: 1,
+    position: "absolute",
     width: "100%",
     height: "100%",
     elevation: 2,
     zIndex: 2,
+  },
+  cameraStyle: {
+    width: "100%",
+    height: "100%",
   },
   fab: {
     position: "absolute",
@@ -321,5 +292,16 @@ const styles = StyleSheet.create({
     padding: 5,
     borderRadius: 10,
     paddingLeft: 10,
+  },
+  cardContent: {
+    flexDirection: "row",
+    gap: 20,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  titleText: {
+    fontWeight: "bold",
+    marginBottom: 10,
+    fontSize: 15,
   },
 });

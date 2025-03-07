@@ -159,8 +159,8 @@ export default function App() {
           <Stack.Screen name="MainFlow" component={MainFlow} />
         ) : (
           <Stack.Screen name="SignFlow" component={SignFlow} />
-        )}
-      </Stack.Navigator>
+        )} 
+      </Stack.Navigator> 
     
     </NavigationContainer>
   );
